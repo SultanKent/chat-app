@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container">
+        <div class="py-5 text-center">
+            <h2>Чат программа</h2>
+            <p class="lead">Регистрация</p>
+        </div>
+        <div class="row">
+            <div class="col-6">
+                <!-- Форма регистрации -->
+                <h3>Форма регистрации</h3>
+                <form id="regForm">
+                    <label for="regName">Имя</label>
+                    <input type="text" name="regName" id="regName" placeholder="Введите имя" class="form-control">
+                    <br>
+                    <label for="regLogin">Логин</label>
+                    <input type="text" name="regLogin" id="regLogin" placeholder="Введите логин" class="form-control">
+                    <br>
+                    <input type="submit" value="Зарегистрироваться" class="btn btn-primary">
+                </form>
+            </div>
+        </div>
+        <!-- Добавляем контейнер для чата, который начинается с display: none; -->
+        <div id="chat-container" style="display: none;">
+            <div class="row">
+                <div class="col-6">
+                    <!-- Форма для отправки сообщений -->
+                    <h3>Форма сообщений</h3>
+                    <form id="messForm">
+                        <input type="hidden" name="name" id="name">
+                        <input type="hidden" name="login" id="login"> <!-- Добавляем поле для логина -->
+                        <label for="message">Сообщение</label>
+                        <textarea name="message" id="message" class="form-control" placeholder="Введите сообщение"></textarea>
+                        <br>
+                        <input type="submit" value="Отправить" class="btn btn-danger">
+                    </form>
+                </div>
+                <div class="col-6">
+                    <h3>Сообщения</h3>
+                    <!-- Вывод всех сообщений будет здесь -->
+                    <div id="all_mess"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрипты -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        $(function() {
+            var socket = io.connect();
+            var $form = $("#messForm");
+            var $regForm = $("#regForm");
+            var $chatContainer = $("#chat-container");
+            var $textarea = $("#message");
+            var $all_messages = $("#all_mess");
+            var $nameInput = $("#name");
+            var $loginInput = $("#login"); // Добавляем поле для логина
+
+            // Устанавливаем класс для сообщения
+            var alertClass;
+            var min = 1;
+            var max = 6;
+            var random = Math.floor(Math.random() * (max - min)) + min;
+
+            switch (random) {
+                case 1:
+                    alertClass = 'secondary';
+                    break;
+                case 2:
+                    alertClass = 'danger';
+                    break;
+                case 3:
+                    alertClass = 'success';
+                    break;
+                case 4:
+                    alertClass = 'warning';
+                    break;
+                case 5:
+                    alertClass = 'info';
+                    break;
+                case 6:
+                    alertClass = 'light';
+                    break;
+            }
+
+            // Обработка регистрации
+            $regForm.submit(function (event) {
+                event.preventDefault();
+                var regName = $("#regName").val();
+                var regLogin = $("#regLogin").val();
+
+                // Отправляем данные регистрации на сервер
+                socket.emit('register', { name: regName, login: regLogin });
+                $("#regName").val('');
+                $("#regLogin").val('');
+            });
+
+            // Подтверждение регистрации
+            socket.on('registration-success', function (data) {
+                // Скрываем форму регистрации и отображаем контейнер чата
+                $regForm.hide();
+                $chatContainer.show();
+                $nameInput.val(data.name); // Устанавливаем значение имени пользователя
+                $loginInput.val(data.login); // Устанавливаем значение логина пользователя
+                alert('Регистрация успешна!');
+            });
+
+            // Остальной код остается неизменным
+            $form.submit(function(event) {
+                event.preventDefault();
+                socket.emit('send mess', { mess: $textarea.val(), name: $nameInput.val(), className: alertClass, login: $loginInput.val() });
+                $textarea.val('');
+            });
+
+            socket.on('add mess', function(data) {
+                $all_messages.append("<div class='alert alert-" + data.className + "'><b>" + data.name + "</b>: " + data.mess + "</div>");
+            });
+        });
+    </script>
+</body>
+</html>
